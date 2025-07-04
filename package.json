@@ -1,6 +1,6 @@
 {
   "name": "embeddable-cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "CLI tool for Embeddable API - manage database connections, environments, and dashboards",
   "private": true,
   "type": "module",
