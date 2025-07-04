@@ -12,7 +12,7 @@ const { version } = packageJson;
 import { createAuthCommand, createInitCommand } from './commands/auth-citty.js';
 import { createDatabaseCommand } from './commands/database-citty.js';
 import { createEnvironmentCommand } from './commands/environment-citty.js';
-import { createListCommand, createTokenCommand, createPreviewCommand } from './commands/embeddable-citty.js';
+import { createListCommand, createTokenCommand } from './commands/embeddable-citty.js';
 import { createVersionCommand } from './commands/version-citty.js';
 
 const main = defineCommand({
@@ -35,7 +35,6 @@ const main = defineCommand({
     env: createEnvironmentCommand(),
     list: createListCommand(),
     token: createTokenCommand(),
-    preview: createPreviewCommand(),
     version: createVersionCommand(),
     config: defineCommand({
       meta: {

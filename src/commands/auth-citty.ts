@@ -13,7 +13,7 @@ export function createAuthCommand() {
       name: 'auth',
       description: 'Manage authentication',
     },
-    async run({ args, subCommand }) {
+    async run({ args: _args, subCommand }) {
       // If no subcommand provided, show help without error
       if (!subCommand) {
         console.log('Usage: embed auth <command>\n');
@@ -178,7 +178,7 @@ export function createInitCommand() {
         Logger.info('\nYou\'re all set! Here are some commands to get started:');
         Logger.log('  embed database connect    - Add a database connection');
         Logger.log('  embed env create          - Create an environment');
-        Logger.log('  embed list                - List available dashboards');
+        Logger.log('  embed list                - List available embeddables');
         Logger.log('  embed --help              - Show all available commands');
       } catch (error) {
         handleError(error);

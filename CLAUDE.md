@@ -20,7 +20,7 @@ The CLI abstracts away direct API communication, allowing users to:
 - Manage database connections without manual API calls
 - Create and configure environments
 - Generate security tokens for dashboard embedding
-- List and preview dashboards
+- List available embeddables
 
 ## Technical Implementation
 
@@ -31,7 +31,6 @@ The CLI abstracts away direct API communication, allowing users to:
 - **Chalk v5** - Colored terminal output (ESM)
 - **Ora v8** - Loading spinners (ESM)
 - **cli-table3** - Table formatting for data display
-- **open** - Cross-platform browser opening
 - **Bun** - For building native binaries
 
 ### ESM Migration

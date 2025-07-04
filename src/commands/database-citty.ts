@@ -15,7 +15,7 @@ export function createDatabaseCommand() {
       name: 'database',
       description: 'Manage database connections',
     },
-    async run({ args, subCommand }) {
+    async run({ args: _args, subCommand }) {
       // If no subcommand provided, show help without error
       if (!subCommand) {
         console.log('Usage: embed database <command>\n');
