@@ -284,7 +284,11 @@ export class EmbeddableAPI {
 
   // Embeddable methods
   async listEmbeddables(): Promise<Embeddable[]> {
-    const response = await this.request<{ embeddables: Embeddable[] }>('/embeddables');
+    const response = await this.request<{ embeddables: Embeddable[] } | null>('/embeddables');
+    // Handle case where API returns no content (empty workspace)
+    if (!response || !response.embeddables) {
+      return [];
+    }
     return response.embeddables;
   }
 
@@ -321,9 +325,18 @@ export class EmbeddableAPI {
   // Utility method to validate API key
   async validateApiKey(): Promise<boolean> {
     try {
-      // Try to list embeddables as a simple validation
-      await this.listEmbeddables();
-      return true;
+      // Just make a simple request to validate the API key
+      // Use a lightweight endpoint that should always return something
+      const response = await fetch(`${this.baseUrl}/embeddables`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+      });
+      
+      // If we get a 200 response, the API key is valid
+      return response.ok;
     } catch (error) {
       return false;
     }
