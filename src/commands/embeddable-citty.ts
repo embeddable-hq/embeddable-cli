@@ -195,21 +195,9 @@ export function createTokenCommand() {
         // Add HTML embedding example
         console.log("\nHTML Embedding Example:");
         console.log("=".repeat(50));
-        console.log(`<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://cdn.embeddable.com/sdk.js"></script>
-</head>
-<body>
-  <div id="dashboard"></div>
-  <script>
-    embeddable.init({
-      token: '${token.token}',
-      container: '#dashboard'
-    });
-  </script>
-</body>
-</html>`);
+        console.log(`<em-beddable 
+  token="${token.token}"
+/>`);
         console.log("=".repeat(50));
 
         console.log("\nFor more embedding options, visit:");
