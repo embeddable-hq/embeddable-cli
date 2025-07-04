@@ -21,6 +21,7 @@ The CLI abstracts away direct API communication, allowing users to:
 - Create and configure environments
 - Generate security tokens for dashboard embedding
 - List available embeddables
+- Setup wizard for guided onboarding
 
 ## Technical Implementation
 
@@ -70,10 +71,11 @@ The CLI communicates with Embeddable's REST API:
    - Include user context and row-level security
    - Configurable expiration times
 
-4. **Dashboard Preview**
-   - Generate preview URLs for embeddables in the Embeddable dashboard
-   - Requires workspace ID (not available via API with static tokens)
-   - URL format: `https://app.{region}.embeddable.com/en/workspace/{workspaceId}/builder/{embeddableId}`
+4. **Setup Wizard**
+   - Interactive onboarding flow for new users
+   - Guides through API configuration, database connection, and environment setup
+   - Optional token generation at the end
+   - Automatically runs on first-time use when no config exists
 
 ## User Experience Design
 
@@ -154,7 +156,12 @@ const main = defineCommand({
     init: createInitCommand(),
     auth: createAuthCommand(),
     database: createDatabaseCommand(),
-    // ...
+    env: createEnvironmentCommand(),
+    list: createListCommand(),
+    token: createTokenCommand(),
+    setup: createSetupCommand(),
+    version: createVersionCommand(),
+    config: createConfigCommand(),
   }
 });
 ```
@@ -164,17 +171,25 @@ const main = defineCommand({
 Each command is created using factory functions that return citty command definitions:
 
 ```typescript
-export function createPreviewCommand() {
+export function createTokenCommand() {
   return defineCommand({
-    meta: { name: 'preview', description: '...' },
+    meta: { name: 'token', description: '...' },
     args: {
       embeddableId: { type: 'positional', required: false },
-      workspace: { type: 'string', alias: 'w' }
+      env: { type: 'string', alias: 'e' }
     },
     async run({ args }) { /* implementation */ }
   });
 }
 ```
+
+### First-Time User Experience
+
+When users run `embed` without any configuration:
+1. CLI detects missing config file
+2. Automatically starts the init process
+3. Prompts user to optionally run the setup wizard
+4. Shows regular help if user declines setup
 
 ### Interactive Prompts with @clack/prompts
 
@@ -247,16 +262,21 @@ Key learnings about @clack/prompts:
    - Integration tests with mock API
    - CLI command tests
 
-## API Limitations and Workarounds
+## API Integration Details
 
-### Workspace Access
-- The `/workspace` endpoint requires different authentication than static API tokens
-- **Workaround**: Prompt users for workspace ID manually
-- **Command**: `embed preview --workspace=<workspace-id>` or interactive prompt
+### Environment API Format
+- Environments use `datasources` array format (not object)
+- Each datasource entry has `data_source` and `connection` fields
+- Example: `[{ "data_source": "main_db", "connection": "postgres-prod" }]`
 
-### Static Token Limitations
-- Some endpoints (like workspace listing) are not accessible with static tokens
-- Users must provide workspace IDs manually for preview functionality
+### Token Generation API
+- The `user` field expects a string, not an object
+- Example: `"user": "user123"` (not `"user": { "id": "user123" }`)
+- Security context is passed as a JSON object for row-level security
+
+### API Key Validation
+- Validation endpoint returns 200 with empty body for valid keys
+- Check `response.ok` rather than parsing response content
 
 ## Common Issues and Solutions
 
@@ -278,6 +298,31 @@ Key learnings about @clack/prompts:
    - Bun required for native binary compilation
    - Fallback to Node.js execution if binaries unavailable
 
+## Recent Improvements
+
+### Token Command Enhancement
+- Token command now prompts for environment selection if none provided
+- Displays HTML embedding example with the generated token
+- Shows direct link to documentation for advanced options
+
+### Documentation Structure
+- README.md restructured as concise overview with navigation
+- Created comprehensive docs/ folder with 9 focused guides:
+  - getting-started.md - First steps and setup wizard
+  - installation.md - Platform-specific installation
+  - commands.md - Complete command reference
+  - configuration.md - Config management and regions
+  - databases.md - Database types and setup
+  - environments.md - Environment management
+  - tokens.md - Security token generation
+  - examples.md - Real-world workflows
+  - troubleshooting.md - Common issues and solutions
+
+### Version Update System
+- Automatic version checking with proper release note filtering
+- Homebrew update integration (requires manual formula update currently)
+- Clear update instructions based on installation method
+
 ## Release Process
 
 ### Prerequisites
@@ -286,8 +331,8 @@ Key learnings about @clack/prompts:
    - Main repository: `embeddable-hq/embeddable-cli`
    - Homebrew tap repository: `embeddable-hq/homebrew-embeddable`
    - Secrets needed:
-     - `NPM_TOKEN` - For publishing to npm
-     - `HOMEBREW_TAP_TOKEN` - GitHub token with access to tap repo
+     - `NPM_TOKEN` - For publishing to npm (not yet configured)
+     - `HOMEBREW_TAP_TOKEN` - GitHub PAT with repo access to tap repository
 
 2. **Scoop Bucket** (Optional):
    - Repository: `embeddable-hq/scoop-bucket`
