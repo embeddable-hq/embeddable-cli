@@ -21,40 +21,69 @@ if ! git diff-index --quiet HEAD --; then
     exit 1
 fi
 
-# Pull latest changes
-echo "📥 Pulling latest changes..."
+# Pull latest changes and tags
+echo "📥 Pulling latest changes and tags..."
 git pull origin main
+git fetch --tags
 
-# Get current version
-CURRENT_VERSION=$(node -p "require('./package.json').version")
-echo "📌 Current version: v$CURRENT_VERSION"
+# Get the latest tag from remote
+LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+LATEST_VERSION=${LATEST_TAG#v}  # Remove 'v' prefix
+
+echo "📌 Latest published version: $LATEST_TAG"
+
+# Get current version from package.json
+PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+# If package.json version is different from latest tag, use package.json version
+if [ "$PACKAGE_VERSION" != "$LATEST_VERSION" ]; then
+    echo "📦 Package.json version ($PACKAGE_VERSION) differs from latest tag ($LATEST_VERSION)"
+    echo "   Using package.json version as base"
+    CURRENT_VERSION=$PACKAGE_VERSION
+else
+    CURRENT_VERSION=$LATEST_VERSION
+fi
 
 # Determine version bump type
-if [ -z "$1" ]; then
+VERSION_TYPE="${1:-patch}"  # Default to patch if not specified
+
+if [ "$VERSION_TYPE" = "help" ] || [ "$VERSION_TYPE" = "--help" ] || [ "$VERSION_TYPE" = "-h" ]; then
     echo ""
-    echo "Select version bump type:"
-    echo "  1) Patch (bug fixes)     - $CURRENT_VERSION → $(npx semver $CURRENT_VERSION -i patch)"
-    echo "  2) Minor (new features)  - $CURRENT_VERSION → $(npx semver $CURRENT_VERSION -i minor)"
-    echo "  3) Major (breaking)      - $CURRENT_VERSION → $(npx semver $CURRENT_VERSION -i major)"
-    echo "  4) Custom version"
+    echo "Usage: pnpm publish [patch|minor|major|<version>]"
     echo ""
-    read -p "Enter your choice (1-4): " CHOICE
-    
-    case $CHOICE in
-        1) VERSION_TYPE="patch" ;;
-        2) VERSION_TYPE="minor" ;;
-        3) VERSION_TYPE="major" ;;
-        4) 
-            read -p "Enter custom version (without 'v'): " CUSTOM_VERSION
-            VERSION_TYPE="custom"
+    echo "Options:"
+    echo "  patch    - Increment patch version (default)"
+    echo "  minor    - Increment minor version"
+    echo "  major    - Increment major version"
+    echo "  <version> - Set specific version (e.g., 1.2.3)"
+    echo ""
+    echo "Examples:"
+    echo "  pnpm publish          # Bump patch version"
+    echo "  pnpm publish patch    # Bump patch version"
+    echo "  pnpm publish minor    # Bump minor version"
+    echo "  pnpm publish major    # Bump major version"
+    echo "  pnpm publish 1.2.3    # Set specific version"
+    exit 0
+fi
+
+# Check if it's a custom version
+if [[ "$VERSION_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    NEW_VERSION="$VERSION_TYPE"
+    VERSION_TYPE="custom"
+    echo "📝 Setting custom version: v$NEW_VERSION"
+else
+    # Calculate new version using semver
+    case $VERSION_TYPE in
+        patch|minor|major)
+            NEW_VERSION=$(npx semver $CURRENT_VERSION -i $VERSION_TYPE)
+            echo "📝 Bumping $VERSION_TYPE version: v$CURRENT_VERSION → v$NEW_VERSION"
             ;;
         *)
-            echo "❌ Invalid choice"
+            echo "❌ Invalid version type: $VERSION_TYPE"
+            echo "   Use: patch, minor, major, or a specific version (e.g., 1.2.3)"
             exit 1
             ;;
     esac
-else
-    VERSION_TYPE="$1"
 fi
 
 # Run pre-release checks
@@ -72,24 +101,34 @@ pnpm build
 
 echo "✅ All checks passed!"
 
-# Bump version
+# Update package.json version
 echo ""
-echo "📝 Bumping version..."
+echo "📝 Updating package.json..."
+npm version "$NEW_VERSION" --no-git-tag-version
+echo "✅ Version updated to v$NEW_VERSION"
 
-if [ "$VERSION_TYPE" = "custom" ]; then
-    npm version "$CUSTOM_VERSION" --no-git-tag-version
-    NEW_VERSION="$CUSTOM_VERSION"
-else
-    npm version "$VERSION_TYPE" --no-git-tag-version
-    NEW_VERSION=$(node -p "require('./package.json').version")
+# Show what will be released
+echo ""
+echo "📋 Release Summary:"
+echo "   • Version: v$NEW_VERSION"
+echo "   • Type: $VERSION_TYPE"
+echo "   • Branch: $CURRENT_BRANCH"
+echo ""
+
+# Confirm release
+read -p "🤔 Proceed with release? (y/N) " -n 1 -r
+echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Release cancelled"
+    # Revert package.json changes
+    git checkout -- package.json package-lock.json
+    exit 1
 fi
-
-echo "✅ Version bumped to v$NEW_VERSION"
 
 # Commit version bump
 echo ""
 echo "💾 Committing version bump..."
-git add package.json package-lock.json
+git add package.json package-lock.json pnpm-lock.yaml 2>/dev/null || git add package.json pnpm-lock.yaml
 git commit -m "chore: release v$NEW_VERSION"
 
 # Create and push tag
