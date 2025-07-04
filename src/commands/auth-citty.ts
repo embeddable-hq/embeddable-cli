@@ -176,6 +176,7 @@ export function createInitCommand() {
         p.outro('✅ Configuration saved!');
         
         Logger.info('\nYou\'re all set! Here are some commands to get started:');
+        Logger.log('  embed setup               - Interactive setup wizard (recommended)');
         Logger.log('  embed database connect    - Add a database connection');
         Logger.log('  embed env create          - Create an environment');
         Logger.log('  embed list                - List available embeddables');

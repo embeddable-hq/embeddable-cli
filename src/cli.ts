@@ -14,6 +14,7 @@ import { createDatabaseCommand } from './commands/database-citty.js';
 import { createEnvironmentCommand } from './commands/environment-citty.js';
 import { createListCommand, createTokenCommand } from './commands/embeddable-citty.js';
 import { createVersionCommand } from './commands/version-citty.js';
+import { createSetupCommand } from './commands/setup-citty.js';
 
 const main = defineCommand({
   meta: {
@@ -30,6 +31,7 @@ const main = defineCommand({
   },
   subCommands: {
     init: createInitCommand(),
+    setup: createSetupCommand(),
     auth: createAuthCommand(),
     database: createDatabaseCommand(),
     env: createEnvironmentCommand(),

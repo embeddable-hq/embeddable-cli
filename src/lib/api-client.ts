@@ -227,14 +227,35 @@ export class EmbeddableAPI {
 
   // Environment methods
   async createEnvironment(name: string, datasourceMappings: Record<string, string>): Promise<Environment> {
+    // Convert object format to array format expected by API
+    const datasources = Object.entries(datasourceMappings).map(([dataSource, connection]) => ({
+      data_source: dataSource,
+      connection: connection
+    }));
+    
     return this.request<Environment>('/environments', {
       method: 'POST',
-      body: JSON.stringify({ name, datasourceMappings }),
+      body: JSON.stringify({ name, datasources }),
     });
   }
 
   async listEnvironments(): Promise<Environment[]> {
-    return this.request<Environment[]>('/environments');
+    const response = await this.request<{ environments: string[] }>('/environments');
+    
+    // Fetch full details for each environment
+    const environmentPromises = response.environments.map(async (name) => {
+      try {
+        return await this.getEnvironment(name);
+      } catch (error) {
+        // If we can't get details, return a minimal object
+        return {
+          id: name,
+          name: name,
+        } as Environment;
+      }
+    });
+    
+    return Promise.all(environmentPromises);
   }
 
   async getEnvironment(name: string): Promise<Environment> {
@@ -245,9 +266,13 @@ export class EmbeddableAPI {
     name: string, 
     updates: { name?: string; datasourceMappings?: Record<string, string> }
   ): Promise<Environment> {
+    const requestBody: any = {};
+    if (updates.name) requestBody.name = updates.name;
+    if (updates.datasourceMappings) requestBody.datasources = updates.datasourceMappings;
+    
     return this.request<Environment>(`/environments/${encodeURIComponent(name)}`, {
       method: 'PUT',
-      body: JSON.stringify(updates),
+      body: JSON.stringify(requestBody),
     });
   }
 

@@ -39,13 +39,40 @@ export function createEnvironmentCommand() {
             const regionDisplay = ConfigManager.getRegionDisplay(config.region);
             p.intro(`🌍 Create a new environment [${regionDisplay}]`);
             
-            const name = await ClackPrompts.getEnvironmentName();
+            // Get existing environments to check for duplicates
+            const existingEnvironments = await api.listEnvironments();
+            const existingNames = existingEnvironments.map(env => env.name.toLowerCase());
+            
+            let name: string;
+            let isValidName = false;
+            
+            while (!isValidName) {
+              name = await ClackPrompts.getEnvironmentName();
+              
+              if (existingNames.includes(name.toLowerCase())) {
+                Logger.warn(`An environment named "${name}" already exists.`);
+                const continueWithNewName = await p.confirm({
+                  message: 'Would you like to choose a different name?',
+                  initialValue: true,
+                });
+                
+                if (p.isCancel(continueWithNewName) || !continueWithNewName) {
+                  p.cancel('Operation cancelled');
+                  process.exit(0);
+                }
+              } else {
+                isValidName = true;
+              }
+            }
             
             const connections = await api.listConnections();
             if (connections.length === 0) {
               Logger.error('No database connections found. Create a connection first with "embed database connect"');
               process.exit(1);
             }
+            
+            console.log('\nNow we\'ll map data sources to your database connection.');
+            console.log('Data sources are logical names used in your Embeddable models.\n');
             
             const mappings: Record<string, string> = {};
             let addMore = true;
@@ -72,6 +99,8 @@ export function createEnvironmentCommand() {
               );
               mappings[dataSource] = connectionId;
               
+              console.log(`  ✓ Mapped "${dataSource}" to connection "${connectionId}"`);
+              
               if (Object.keys(mappings).length > 0) {
                 addMore = await ClackPrompts.confirmAction('Add another data source mapping?');
               }
@@ -80,18 +109,30 @@ export function createEnvironmentCommand() {
             const spinner = p.spinner();
             spinner.start('Creating environment...');
             
-            const environment = await api.createEnvironment(name, mappings);
-            
-            spinner.stop(`Environment "${environment.name}" created successfully`, 0);
-            
-            const setAsDefault = await ClackPrompts.confirmAction('Set as default environment?');
-            
-            if (setAsDefault) {
-              ConfigManager.updateConfig({ defaultEnvironment: environment.id });
-              Logger.success('Default environment updated');
+            try {
+              const environment = await api.createEnvironment(name!, mappings);
+              
+              spinner.stop(`Environment "${environment.name}" created successfully`, 0);
+              
+              const setAsDefault = await ClackPrompts.confirmAction('Set as default environment?');
+              
+              if (setAsDefault) {
+                ConfigManager.updateConfig({ defaultEnvironment: environment.id || environment.name });
+                Logger.success('Default environment updated');
+              }
+              
+              p.outro('✅ Environment created!');
+            } catch (error: any) {
+              spinner.stop('Failed to create environment', 1);
+              
+              // Check if it's a duplicate name error (shouldn't happen with our check, but just in case)
+              if (error.message && error.message.includes('already exists')) {
+                Logger.error('An environment with this name already exists. Please try again with a different name.');
+                Logger.info('Run "embed env list" to see existing environments.');
+              } else {
+                throw error; // Re-throw for normal error handling
+              }
             }
-            
-            p.outro('✅ Environment created!');
           } catch (error) {
             handleError(error);
           }
@@ -125,10 +166,21 @@ export function createEnvironmentCommand() {
             });
             
             environments.forEach((env) => {
-              const dataSources = Object.keys((env as any).connections || {}).join(', ') || 'None';
-              const isDefault = config?.defaultEnvironment === env.id ? '✓' : '';
+              let dataSources = 'None';
               
-              table.push([env.id, env.name, dataSources, isDefault]);
+              if ((env as any).datasources && Array.isArray((env as any).datasources)) {
+                // Handle array format from API
+                dataSources = (env as any).datasources
+                  .map((ds: any) => ds.data_source)
+                  .join(', ');
+              } else if ((env as any).connections) {
+                // Handle object format (legacy or different response)
+                dataSources = Object.keys((env as any).connections).join(', ');
+              }
+              
+              const isDefault = config?.defaultEnvironment === env.id || config?.defaultEnvironment === env.name ? '✓' : '';
+              
+              table.push([env.id || env.name, env.name, dataSources, isDefault]);
             });
             
             console.log(table.toString());

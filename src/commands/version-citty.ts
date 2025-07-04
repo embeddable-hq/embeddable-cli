@@ -79,12 +79,18 @@ async function checkForUpdates(autoUpdate: boolean = false) {
     
     if (semver.gt(latestVersion, currentVersion)) {
       Logger.success(`New version available: v${latestVersion} (current: v${currentVersion})`);
-      Logger.log(`\nRelease notes:`);
-      Logger.log(release.body || 'No release notes available');
-      Logger.log(`\nView release: ${release.html_url}`);
+      
+      // Extract actual release notes, filtering out installation instructions
+      const releaseNotes = extractReleaseNotes(release.body || '');
+      if (releaseNotes) {
+        Logger.log(`\nChanges:`);
+        Logger.log(releaseNotes);
+      }
       
       if (autoUpdate || await confirmUpdate()) {
         await performUpdate(latestVersion);
+      } else {
+        Logger.log(`\nTo update: embed version --update`);
       }
     } else if (semver.eq(latestVersion, currentVersion)) {
       Logger.success(`You're on the latest version (v${currentVersion})`);
@@ -134,7 +140,7 @@ async function performUpdate(newVersion: string) {
         Logger.log('Binary:   Download from https://github.com/embeddable-hq/embeddable-cli/releases/latest');
     }
     
-    Logger.success(`\nUpdate to v${newVersion} complete! Restart your terminal or run 'embed version' to verify.`);
+    Logger.success(`\nUpdated to v${newVersion}!`);
   } catch (error) {
     spinner.stop('Update failed', 1);
     Logger.error('Failed to update automatically. Please update manually.');
@@ -157,4 +163,38 @@ function detectInstallMethod(): string {
   
   
   return 'binary';
+}
+
+function extractReleaseNotes(body: string): string {
+  // Remove common installation sections
+  const installationMarkers = [
+    '## Installation',
+    '### Installation',
+    '## How to Install',
+    '### How to Install',
+    '## Download',
+    '### Download'
+  ];
+  
+  // Find the first installation marker
+  let cutoffIndex = body.length;
+  for (const marker of installationMarkers) {
+    const index = body.indexOf(marker);
+    if (index !== -1 && index < cutoffIndex) {
+      cutoffIndex = index;
+    }
+  }
+  
+  // Extract content before installation instructions
+  let releaseNotes = body.substring(0, cutoffIndex).trim();
+  
+  // Also remove any trailing markdown headers that might be empty
+  releaseNotes = releaseNotes.replace(/^#+\s*$/gm, '').trim();
+  
+  // If notes are too short or empty after filtering, return empty
+  if (releaseNotes.length < 10) {
+    return '';
+  }
+  
+  return releaseNotes;
 }
