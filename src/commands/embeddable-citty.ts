@@ -135,12 +135,35 @@ export function createTokenCommand() {
           embeddableId = selected as string;
         }
 
-        const environmentId = args.env || config.defaultEnvironment;
+        let environmentId = args.env || config.defaultEnvironment;
 
+        // If no environment provided, prompt for selection
         if (!environmentId) {
-          throw new CLIError(
-            'No environment specified. Use --env or set a default with "embed env set-default"',
-          );
+          const spinner = p.spinner();
+          spinner.start("Fetching environments...");
+          const environments = await api.listEnvironments();
+          spinner.stop();
+
+          if (environments.length === 0) {
+            throw new CLIError(
+              'No environments found. Create one first with "embed env create"',
+            );
+          }
+
+          const selected = await p.select({
+            message: "Select an environment:",
+            options: environments.map((env) => ({
+              label: env.name,
+              value: env.id,
+            })),
+          });
+
+          if (p.isCancel(selected)) {
+            p.cancel("Token generation cancelled");
+            process.exit(0);
+          }
+
+          environmentId = selected as string;
         }
 
         const tokenDetails = await ClackPrompts.getTokenDetails();
@@ -168,6 +191,29 @@ export function createTokenCommand() {
           console.log("\nEmbed URL:");
           console.log(token.embedUrl);
         }
+
+        // Add HTML embedding example
+        console.log("\nHTML Embedding Example:");
+        console.log("=".repeat(50));
+        console.log(`<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.embeddable.com/sdk.js"></script>
+</head>
+<body>
+  <div id="dashboard"></div>
+  <script>
+    embeddable.init({
+      token: '${token.token}',
+      container: '#dashboard'
+    });
+  </script>
+</body>
+</html>`);
+        console.log("=".repeat(50));
+
+        console.log("\nFor more embedding options, visit:");
+        console.log("https://docs.embeddable.com/data-modeling/row-level-security#security-tokens-and-security-context");
       } catch (error) {
         handleError(error);
       }
