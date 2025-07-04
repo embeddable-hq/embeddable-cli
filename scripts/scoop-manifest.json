@@ -1,0 +1,29 @@
+{
+  "version": "0.1.0",
+  "description": "CLI tool for Embeddable API - manage database connections, environments, and dashboards",
+  "homepage": "https://github.com/embeddable/cli",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/embeddable/cli/releases/download/v0.1.0/embed-win-x64.exe",
+      "hash": "PLACEHOLDER_SHA256_WINDOWS_X64"
+    }
+  },
+  "bin": "embed-win-x64.exe",
+  "shortcuts": [
+    [
+      "embed-win-x64.exe",
+      "Embeddable CLI"
+    ]
+  ],
+  "checkver": {
+    "github": "https://github.com/embeddable/cli"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/embeddable/cli/releases/download/v$version/embed-win-x64.exe"
+      }
+    }
+  }
+}

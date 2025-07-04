@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - uses: pnpm/action-setup@v2
+      with:
+        version: 9
+        
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Type check
+      run: pnpm typecheck
+      
+    - name: Lint
+      run: pnpm lint
+      
+    - name: Build
+      run: pnpm build
+      
+    - name: Test build output
+      run: node dist/cli.js --help
+
+  build-binaries:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        
+    - uses: pnpm/action-setup@v2
+      with:
+        version: 9
+        
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      
+    - name: Build
+      run: pnpm build
+      
+    - name: Test binary build
+      run: |
+        bun build ./dist/cli.js --compile --target=bun --outfile embed-test
+        
+    - name: Test binary execution (Unix)
+      if: matrix.os != 'windows-latest'
+      run: ./embed-test --help
+      
+    - name: Test binary execution (Windows)
+      if: matrix.os == 'windows-latest'
+      run: ./embed-test.exe --help

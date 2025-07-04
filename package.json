@@ -1,0 +1,52 @@
+{
+  "name": "@embeddable/cli",
+  "version": "0.1.0",
+  "description": "CLI tool for Embeddable API - manage database connections, environments, and dashboards",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "embed": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "build:all": "npm run build:linux && npm run build:mac && npm run build:win",
+    "build:linux": "bun build src/cli.ts --compile --target=bun-linux-x64 --outfile dist/embed-linux-x64",
+    "build:mac": "bun build src/cli.ts --compile --target=bun-darwin-arm64 --outfile dist/embed-macos-arm64",
+    "build:win": "bun build src/cli.ts --compile --target=bun-windows-x64 --outfile dist/embed-win-x64.exe",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "embeddable",
+    "cli",
+    "analytics",
+    "dashboard"
+  ],
+  "author": "Embeddable",
+  "license": "MIT",
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@types/semver": "^7.7.0",
+    "chalk": "^5.4.1",
+    "citty": "^0.1.6",
+    "cli-table3": "^0.6.5",
+    "open": "^10.1.2",
+    "ora": "^8.2.0",
+    "semver": "^7.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/open": "^6.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
