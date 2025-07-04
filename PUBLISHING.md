@@ -25,10 +25,10 @@ npm run publish:major  # For breaking changes (0.1.0 → 1.0.0)
 ## After Publishing
 
 GitHub Actions will automatically:
-- Create a GitHub release
-- Build binaries for all platforms
-- Publish to npm as `@embeddable/cli`
-- Update the Homebrew formula
+- Create a GitHub release with installation instructions
+- Build binaries for all platforms (Linux, macOS Intel & ARM, Windows)
+- Update the Homebrew formula with the new version
+- Update Scoop manifest (if bucket repository exists)
 
 Monitor progress at: https://github.com/embeddable-hq/embeddable-cli/actions
 
@@ -48,13 +48,6 @@ If the automated update fails:
    - Update `url` and `sha256`
    - Commit and push
 
-### Publish to npm Manually
-
-If npm publish fails in CI:
-
-```bash
-npm publish --access public
-```
 
 ## Troubleshooting
 

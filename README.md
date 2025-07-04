@@ -11,18 +11,6 @@ brew tap embeddable-hq/embeddable
 brew install embed
 ```
 
-### Using npm/pnpm/yarn
-
-```bash
-# npm
-npm install -g @embeddable/cli
-
-# pnpm
-pnpm add -g @embeddable/cli
-
-# yarn
-yarn global add @embeddable/cli
-```
 
 ### Using Scoop (Windows)
 

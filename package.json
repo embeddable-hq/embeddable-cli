@@ -1,12 +1,10 @@
 {
-  "name": "@embeddable/cli",
+  "name": "embeddable-cli",
   "version": "0.1.0",
   "description": "CLI tool for Embeddable API - manage database connections, environments, and dashboards",
+  "private": true,
   "type": "module",
   "main": "dist/cli.js",
-  "bin": {
-    "embed": "./dist/cli.js"
-  },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc",

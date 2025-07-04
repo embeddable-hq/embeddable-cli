@@ -120,23 +120,6 @@ async function performUpdate(newVersion: string) {
         spinner.stop('Updated successfully via Homebrew', 0);
         break;
         
-      case 'npm':
-        spinner.start('Updating via npm...');
-        execSync('npm install -g @embeddable/cli@latest', { stdio: 'inherit' });
-        spinner.stop('Updated successfully via npm', 0);
-        break;
-        
-      case 'pnpm':
-        spinner.start('Updating via pnpm...');
-        execSync('pnpm add -g @embeddable/cli@latest', { stdio: 'inherit' });
-        spinner.stop('Updated successfully via pnpm', 0);
-        break;
-        
-      case 'yarn':
-        spinner.start('Updating via Yarn...');
-        execSync('yarn global add @embeddable/cli@latest', { stdio: 'inherit' });
-        spinner.stop('Updated successfully via Yarn', 0);
-        break;
         
       case 'binary':
         spinner.stop();
@@ -148,9 +131,7 @@ async function performUpdate(newVersion: string) {
         spinner.stop();
         Logger.info('Could not detect installation method. Please update manually:');
         Logger.log('\nHomebrew: brew upgrade embed');
-        Logger.log('npm:      npm install -g @embeddable/cli@latest');
-        Logger.log('pnpm:     pnpm add -g @embeddable/cli@latest');
-        Logger.log('yarn:     yarn global add @embeddable/cli@latest');
+        Logger.log('Binary:   Download from https://github.com/embeddable-hq/embeddable-cli/releases/latest');
     }
     
     Logger.success(`\nUpdate to v${newVersion} complete! Restart your terminal or run 'embed version' to verify.`);
@@ -174,40 +155,6 @@ function detectInstallMethod(): string {
     // Not installed via Homebrew
   }
   
-  try {
-    // Check if installed via npm/pnpm/yarn
-    const whichResult = execSync('which embed', { encoding: 'utf8' }).trim();
-    
-    if (whichResult.includes('/.npm/') || whichResult.includes('/npm/')) {
-      return 'npm';
-    }
-    
-    if (whichResult.includes('/.pnpm/') || whichResult.includes('/pnpm/')) {
-      return 'pnpm';
-    }
-    
-    if (whichResult.includes('/.yarn/') || whichResult.includes('/yarn/')) {
-      return 'yarn';
-    }
-    
-    // Check package.json location
-    if (whichResult.includes('/node_modules/')) {
-      // Try to detect which package manager
-      try {
-        execSync('pnpm --version', { stdio: 'ignore' });
-        return 'pnpm';
-      } catch {
-        try {
-          execSync('yarn --version', { stdio: 'ignore' });
-          return 'yarn';
-        } catch {
-          return 'npm';
-        }
-      }
-    }
-  } catch {
-    // Binary or unknown installation
-  }
   
   return 'binary';
 }

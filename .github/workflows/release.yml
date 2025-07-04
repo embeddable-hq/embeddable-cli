@@ -7,14 +7,18 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
     steps:
+      - name: Get version
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -23,6 +27,23 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
+          body: |
+            ## Installation
+            
+            ### Homebrew
+            ```bash
+            brew tap embeddable-hq/embeddable
+            brew install embed
+            ```
+            
+            ### Direct Download
+            Download the appropriate binary for your platform from the assets below.
+            
+            ### Scoop (Windows)
+            ```bash
+            scoop bucket add embeddable https://github.com/embeddable-hq/scoop-bucket
+            scoop install embed
+            ```
           draft: false
           prerelease: false
 
@@ -33,16 +54,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux-x64
-            node: 20
+            bun_target: bun-linux-x64
           - os: macos-latest
             target: darwin-x64
-            node: 20
+            bun_target: bun-darwin-x64
           - os: macos-latest
             target: darwin-arm64
-            node: 20
+            bun_target: bun-darwin-arm64
           - os: windows-latest
-            target: win32-x64
-            node: 20
+            target: win-x64
+            bun_target: bun-windows-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -53,79 +74,43 @@ jobs:
       
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 20
           
       - uses: pnpm/action-setup@v2
         with:
           version: 9
           
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install
         
       - name: Build
         run: pnpm build
         
       - name: Build binary
         run: |
-          bun build ./dist/cli.js --compile --target=bun-${{ matrix.target }} --outfile embed-${{ matrix.target }}
+          bun build ./dist/cli.js --compile --target=${{ matrix.bun_target }} --outfile embed-${{ matrix.target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           
       - name: Archive binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
+          chmod +x embed-${{ matrix.target }}
           tar -czf embed-${{ matrix.target }}.tar.gz embed-${{ matrix.target }}
           
       - name: Archive binary (Windows)
         if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          7z a -tzip embed-${{ matrix.target }}.zip embed-${{ matrix.target }}.exe
+          Compress-Archive -Path embed-${{ matrix.target }}.exe -DestinationPath embed-${{ matrix.target }}.zip
           
-      - name: Upload Release Asset (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./embed-${{ matrix.target }}.tar.gz
-          asset_name: embed-${{ matrix.target }}.tar.gz
-          asset_content_type: application/gzip
-          
-      - name: Upload Release Asset (Windows)
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./embed-${{ matrix.target }}.zip
-          asset_name: embed-${{ matrix.target }}.zip
-          asset_content_type: application/zip
-
-  publish-npm:
-    needs: create-release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
-          
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 9
-          
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        
-      - name: Build
-        run: pnpm build
-        
-      - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          asset_path: ./embed-${{ matrix.target }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
+          asset_name: embed-${{ matrix.target }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
+          asset_content_type: ${{ matrix.os == 'windows-latest' && 'application/zip' || 'application/gzip' }}
 
   update-homebrew-tap:
     needs: [create-release, build-binaries]
@@ -135,25 +120,82 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: embeddable-hq/homebrew-embeddable
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
           
       - name: Update formula
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${{ needs.create-release.outputs.version }}
           URL="https://github.com/embeddable-hq/embeddable-cli/archive/refs/tags/v${VERSION}.tar.gz"
           
           # Download the tarball to calculate SHA256
+          echo "Downloading release tarball..."
           curl -L -o embeddable-cli.tar.gz "$URL"
           SHA256=$(sha256sum embeddable-cli.tar.gz | cut -d' ' -f1)
+          
+          echo "Version: $VERSION"
+          echo "URL: $URL"
+          echo "SHA256: $SHA256"
           
           # Update the formula
           sed -i "s|url \".*\"|url \"$URL\"|" Formula/embed.rb
           sed -i "s|sha256 \".*\"|sha256 \"$SHA256\"|" Formula/embed.rb
+          
+          # Show the changes
+          echo "Updated formula:"
+          cat Formula/embed.rb
           
       - name: Commit and push changes
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add Formula/embed.rb
-          git commit -m "Update embed to version ${GITHUB_REF#refs/tags/}"
+          git commit -m "Update embed to version ${{ needs.create-release.outputs.version }}" || echo "No changes to commit"
+          git push
+
+  update-scoop-bucket:
+    needs: [create-release, build-binaries]
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Don't fail the whole workflow if Scoop update fails
+    steps:
+      - name: Checkout scoop bucket
+        uses: actions/checkout@v4
+        with:
+          repository: embeddable-hq/scoop-bucket
+          token: ${{ secrets.SCOOP_BUCKET_TOKEN || secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+          
+      - name: Update manifest
+        if: success()
+        run: |
+          VERSION=${{ needs.create-release.outputs.version }}
+          WIN_URL="https://github.com/embeddable-hq/embeddable-cli/releases/download/v${VERSION}/embed-win-x64.zip"
+          
+          # Create or update the manifest
+          cat > bucket/embed.json << EOF
+          {
+            "version": "${VERSION}",
+            "description": "CLI tool for Embeddable API",
+            "homepage": "https://github.com/embeddable-hq/embeddable-cli",
+            "license": "MIT",
+            "architecture": {
+              "64bit": {
+                "url": "${WIN_URL}",
+                "bin": "embed.exe"
+              }
+            },
+            "checkver": "github",
+            "autoupdate": {
+              "architecture": {
+                "64bit": {
+                  "url": "https://github.com/embeddable-hq/embeddable-cli/releases/download/v\$version/embed-win-x64.zip"
+                }
+              }
+            }
+          }
+          EOF
+          
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add bucket/embed.json
+          git commit -m "Update embed to version ${VERSION}" || echo "No changes to commit"
           git push
