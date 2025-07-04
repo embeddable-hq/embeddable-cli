@@ -193,15 +193,27 @@ export function createTokenCommand() {
         }
 
         // Add HTML embedding example
+        const regionParam = config.region !== 'US' ? `?region=${config.region.toLowerCase()}` : '';
         console.log("\nHTML Embedding Example:");
         console.log("=".repeat(50));
-        console.log(`<em-beddable 
-  token="${token.token}"
-/>`);
+        console.log(`<!DOCTYPE html>
+<html>
+<head>
+  <script 
+    type="module"
+    src="https://embed.embeddable.com/js/v1/${regionParam}">
+  </script>
+</head>
+<body>
+  <em-beddable 
+    token="${token.token}">
+  </em-beddable>
+</body>
+</html>`);
         console.log("=".repeat(50));
 
         console.log("\nFor more embedding options, visit:");
-        console.log("https://docs.embeddable.com/data-modeling/row-level-security#security-tokens-and-security-context");
+        console.log("https://docs.embeddable.com/deployment/embedding");
       } catch (error) {
         handleError(error);
       }
