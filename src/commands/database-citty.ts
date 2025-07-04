@@ -15,6 +15,20 @@ export function createDatabaseCommand() {
       name: 'database',
       description: 'Manage database connections',
     },
+    async run({ args, subCommand }) {
+      // If no subcommand provided, show help without error
+      if (!subCommand) {
+        console.log('Usage: embed database <command>\n');
+        console.log('Commands:');
+        console.log('  connect    Create a new database connection');
+        console.log('  list       List all connections');
+        console.log('  test       Test a connection');
+        console.log('  update     Update a connection');
+        console.log('  remove     Remove a connection');
+        console.log('\nRun "embed database <command> --help" for more information');
+        return; // Exit cleanly with code 0
+      }
+    },
     subCommands: {
       connect: defineCommand({
         meta: {

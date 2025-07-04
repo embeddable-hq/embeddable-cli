@@ -75,28 +75,21 @@ const main = defineCommand({
   },
 });
 
-// Intercept process.stderr to suppress specific error messages
-const originalStderrWrite = process.stderr.write;
-let suppressNextError = false;
-
-(process.stderr.write as any) = function(...args: any[]): boolean {
-  const str = args[0]?.toString() || '';
-  
-  // Check if this is the "No command specified" error
-  if (str.includes('No command specified')) {
-    suppressNextError = true;
-    // Exit gracefully after a small delay to ensure help is shown
-    setTimeout(() => process.exit(0), 10);
-    return true;
+// Run the CLI and handle exit codes properly
+runMain(main).then(() => {
+  // Success - exit cleanly
+  process.exit(0);
+}).catch((error) => {
+  // Check if this is just a "no command specified" error
+  const errorStr = error?.toString() || '';
+  if (errorStr.includes('No command specified') || errorStr.includes('Unknown command')) {
+    // Help was shown, exit cleanly
+    process.exit(0);
   }
   
-  // Skip ERROR prefix if we're suppressing
-  if (suppressNextError && str.includes('ERROR')) {
-    return true;
+  // For actual errors, show them and exit with 1
+  if (error && !errorStr.includes('ELIFECYCLE')) {
+    console.error(error);
   }
-  
-  // @ts-expect-error - Complex monkey-patch for stderr interception
-  return originalStderrWrite.apply(process.stderr, args);
-};
-
-runMain(main);
+  process.exit(1);
+});

@@ -13,6 +13,18 @@ export function createAuthCommand() {
       name: 'auth',
       description: 'Manage authentication',
     },
+    async run({ args, subCommand }) {
+      // If no subcommand provided, show help without error
+      if (!subCommand) {
+        console.log('Usage: embed auth <command>\n');
+        console.log('Commands:');
+        console.log('  login     Set or update API credentials');
+        console.log('  logout    Clear stored credentials');
+        console.log('  status    Show current authentication status');
+        console.log('\nRun "embed auth <command> --help" for more information');
+        return; // Exit cleanly with code 0
+      }
+    },
     subCommands: {
       login: defineCommand({
         meta: {

@@ -13,6 +13,19 @@ export function createEnvironmentCommand() {
       name: 'env',
       description: 'Manage environments',
     },
+    async run({ args, subCommand }) {
+      // If no subcommand provided, show help without error
+      if (!subCommand) {
+        console.log('Usage: embed env <command>\n');
+        console.log('Commands:');
+        console.log('  create         Create a new environment');
+        console.log('  list           List all environments');
+        console.log('  set-default    Set the default environment');
+        console.log('  remove         Remove an environment');
+        console.log('\nRun "embed env <command> --help" for more information');
+        return; // Exit cleanly with code 0
+      }
+    },
     subCommands: {
       create: defineCommand({
         meta: {
