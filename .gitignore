@@ -13,3 +13,4 @@ coverage/
 *.d.ts
 *.map
 !scripts/*.js
+*.tar.gz

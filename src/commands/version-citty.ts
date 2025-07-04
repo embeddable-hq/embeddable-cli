@@ -60,8 +60,8 @@ async function checkForUpdates(autoUpdate: boolean = false) {
   spinner.start('Checking for updates...');
   
   try {
-    // Check GitHub releases from public releases repo
-    const response = await fetch('https://api.github.com/repos/embeddable-hq/embeddable-cli-releases/releases/latest', {
+    // Check GitHub releases
+    const response = await fetch('https://api.github.com/repos/embeddable-hq/embeddable-cli/releases/latest', {
       headers: {
         'Accept': 'application/vnd.github.v3+json',
       },
