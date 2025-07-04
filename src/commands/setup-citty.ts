@@ -347,7 +347,7 @@ export function createSetupCommand() {
                   expiryInSeconds: tokenDetails.expiresIn
                     ? parseExpiry(tokenDetails.expiresIn)
                     : 86400,
-                  user: tokenDetails.userId ? { id: tokenDetails.userId } : undefined,
+                  user: tokenDetails.userId || undefined,
                   securityContext: tokenDetails.filters,
                 });
                 

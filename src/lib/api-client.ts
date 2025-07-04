@@ -297,7 +297,7 @@ export class EmbeddableAPI {
     options: {
       expiryInSeconds?: number;
       securityContext?: Record<string, any>;
-      user?: { id: string; email?: string };
+      user?: string;
       environment?: string;
     } = {}
   ): Promise<SecurityToken> {
@@ -305,7 +305,7 @@ export class EmbeddableAPI {
       embeddableId,
       expiryInSeconds: options.expiryInSeconds || 3600,
       securityContext: options.securityContext || {},
-      user: options.user || { id: 'cli-user' },
+      user: options.user || 'cli-user',
       environment: options.environment,
     };
 
