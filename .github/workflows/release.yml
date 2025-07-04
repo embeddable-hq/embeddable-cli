@@ -55,10 +55,10 @@ jobs:
           - os: ubuntu-latest
             target: linux-x64
             bun_target: bun-linux-x64
-          - os: macos-latest
+          - os: macos-13  # Intel Mac
             target: darwin-x64
             bun_target: bun-darwin-x64
-          - os: macos-latest
+          - os: macos-latest  # M1 Mac
             target: darwin-arm64
             bun_target: bun-darwin-arm64
           - os: windows-latest
@@ -86,21 +86,45 @@ jobs:
       - name: Build
         run: pnpm build
         
-      - name: Build binary
+      - name: Debug - Check dist directory
         run: |
-          bun build ./dist/cli.js --compile --target=${{ matrix.bun_target }} --outfile embed-${{ matrix.target }}${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+          echo "Contents of dist directory:"
+          ls -la dist/
+          echo "Node version:"
+          node --version
+          echo "Bun version:"
+          bun --version
+        shell: bash
+        
+      - name: Clean build directory
+        run: |
+          rm -rf embed-${{ matrix.target }}* || true
+        shell: bash
+          
+      - name: Build binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          bun build ./dist/cli.js --compile --target=${{ matrix.bun_target }} --outfile embed-${{ matrix.target }}
+          
+      - name: Build binary (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          bun build ./dist/cli.js --compile --target=${{ matrix.bun_target }} --outfile embed-${{ matrix.target }}.exe
           
       - name: Archive binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
           chmod +x embed-${{ matrix.target }}
           tar -czf embed-${{ matrix.target }}.tar.gz embed-${{ matrix.target }}
+          ls -la embed-${{ matrix.target }}*
           
       - name: Archive binary (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           Compress-Archive -Path embed-${{ matrix.target }}.exe -DestinationPath embed-${{ matrix.target }}.zip
+          Get-ChildItem embed-${{ matrix.target }}*
           
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
